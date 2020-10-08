@@ -1,3 +1,6 @@
+import sqlite3
+import json
+from models import Location
 LOCATIONS = [
     {
         "id": 1,
@@ -14,16 +17,47 @@ LOCATIONS = [
 
 
 def get_all_locations():
-    return LOCATIONS
+    with sqlite3.connect("./Kennel.db") as conn:
+        conn.row_factory = sqlite3.Row
+        db_cursor = conn.cursor()
+
+        db_cursor.execute("""
+        Select
+            l.name,
+            l.address,
+            l.id
+        FROM location l
+        """)
+
+        locations = []
+
+        dataset = db_cursor.fetchall()
+
+        for row in dataset:
+            location = Location(row['name'], row['address'], row['id'])
+            locations.append(location.__dict__)
+
+        return json.dumps(locations)
 
 def get_single_location(id):
-    requested_location = None
+    with sqlite3.connect("./Kennel.db") as conn:
+        conn.row_factory = sqlite3.Row
+        db_cursor = conn.cursor()
 
-    for location in LOCATIONS:
-        if location["id"] == id:
-            requested_location = location
+        db_cursor.execute("""
+        SELECT 
+            l.name,
+            l.address,
+            l.id
+        FROM location l
+        WHERE l.id = ?
+        """, (id,))
 
-    return requested_location
+        data = db_cursor.fetchone()
+
+        location = Location(data['name'], data['address'], data['id'])
+
+        return json.dumps(location.__dict__)
 
 def create_location(location):
     max_id = LOCATIONS[-1]["id"]
@@ -45,3 +79,10 @@ def delete_location(id):
 
     if location_index >= 0:
         LOCATIONS.pop(location_index)
+
+
+def update_location(id, newLocation):
+    for index, location in enumerate(LOCATIONS):
+        if location["id"] == id:
+            LOCATIONS[index] = newLocation
+        break
